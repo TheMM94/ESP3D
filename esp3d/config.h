@@ -19,7 +19,7 @@
 */
 
 //version and sources location
-#define FW_VERSION "2.1.0.c26"
+#define FW_VERSION "2.1.1.c26"
 #define REPOSITORY "https://github.com/luc-github/ESP3D"
 
 //Customize ESP3D ////////////////////////////////////////////////////////////////////////
@@ -31,7 +31,7 @@
 #define ESP_MANUFACTURER_NAME "Espressif Systems"
 #define ESP_MANUFACTURER_URL "http://espressif.com"
 //default name if no mac address is valid
-#define ESP_DEFAULT_NAME "MYESP"
+#define ESP_DEFAULT_NAME "FHNW-3D-Printer"
 //if commented name will follow mac address 3 last digits
 //like ESP_XXXXXX (eg:ESP_028E41) to avoid overlap if several ESP3D
 #define ESP_HOST_NAME ESP_DEFAULT_NAME
@@ -40,7 +40,7 @@
 //FEATURES - comment to disable //////////////////////////////////////////////////////////
 
 //Do we use async webserver or not
-//#define ASYNCWEBSERVER
+#define ASYNCWEBSERVER
 
 //SERIAL_COMMAND_FEATURE: allow to send command by serial
 #define SERIAL_COMMAND_FEATURE
@@ -65,7 +65,7 @@
 #define WEB_UPDATE_FEATURE
 
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
-//#define RECOVERY_FEATURE
+#define RECOVERY_FEATURE
 
 //DIRECT_PIN_FEATURE: allow to access pin using ESP201 command
 #define DIRECT_PIN_FEATURE
@@ -95,10 +95,10 @@
 
 //which serial ESP use to communicate to printer (ESP32 has 3 serials available, ESP8266 only one)
 //Uncomment one only
-#define USE_SERIAL_0
+//#define USE_SERIAL_0
 //For ESP32 Only
 //#define USE_SERIAL_1
-//#define USE_SERIAL_2
+#define USE_SERIAL_2
 
 //Pins Definition ////////////////////////////////////////////////////////////////////////
 //-1 means use default pins of your board what ever the serial you choose
@@ -107,7 +107,7 @@
 
 #ifdef RECOVERY_FEATURE
 //pin used to reset setting
-#define RESET_CONFIG_PIN 2
+#define RESET_CONFIG_PIN 25
 #endif
 
 #ifdef DHT_FEATURE
@@ -139,9 +139,9 @@
 
 //DEBUG Flag do not do this when connected to printer !!!
 //be noted all upload may failed if enabled
-//#define DEBUG_ESP3D
+#define DEBUG_ESP3D
 //#define DEBUG_OUTPUT_SPIFFS
-//#define DEBUG_OUTPUT_SERIAL
+#define DEBUG_OUTPUT_SERIAL
 //#define DEBUG_OUTPUT_TCP
 
 //Sanity check
@@ -342,9 +342,9 @@ typedef enum {
 
 //default values
 #define DEFAULT_WIFI_MODE			AP_MODE
-const char DEFAULT_AP_SSID []  PROGMEM =		"ESP3D";
+const char DEFAULT_AP_SSID []  PROGMEM =		"FHNW-3D-Printer";
 const char DEFAULT_AP_PASSWORD [] PROGMEM =	"12345678";
-const char DEFAULT_STA_SSID []  PROGMEM =		"ESP3D";
+const char DEFAULT_STA_SSID []  PROGMEM =		"FHNW-3D-Printer";
 const char DEFAULT_STA_PASSWORD [] PROGMEM =	"12345678";
 const byte DEFAULT_STA_IP_MODE  = 				DHCP_MODE;
 const byte DEFAULT_AP_IP_MODE = 				STATIC_IP_MODE;
@@ -355,7 +355,7 @@ const long DEFAULT_BAUD_RATE =			115200;
 #define DEFAULT_PHY_MODE			WIFI_PHY_MODE_11G
 #define DEFAULT_SLEEP_MODE			WIFI_MODEM_SLEEP
 #define DEFAULT_CHANNEL				11
-#define DEFAULT_AUTH_TYPE			AUTH_WPA_PSK
+#define DEFAULT_AUTH_TYPE			WIFI_AUTH_WPA2_PSK
 #define DEFAULT_SSID_VISIBLE			1
 #define DEFAULT_MAX_CONNECTIONS			4
 #define DEFAULT_BEACON_INTERVAL			100
@@ -365,9 +365,9 @@ const char DEFAULT_ADMIN_PWD []  PROGMEM =	"admin";
 const char DEFAULT_USER_PWD []  PROGMEM =	"user";
 const char DEFAULT_ADMIN_LOGIN []  PROGMEM =	"admin";
 const char DEFAULT_USER_LOGIN []  PROGMEM =	"user";
-const char DEFAULT_TIME_SERVER1 []  PROGMEM =	"time.nist.gov";
+const char DEFAULT_TIME_SERVER1 []  PROGMEM =	"ntp.metas.ch";
 const char DEFAULT_TIME_SERVER2 []  PROGMEM =	"0.pool.ntp.org";
-const char DEFAULT_TIME_SERVER3 []  PROGMEM =	"1.pool.ntp.org";
+const char DEFAULT_TIME_SERVER3 []  PROGMEM =	"time.nist.gov";
 #define DEFAULT_TIME_ZONE			0
 #define DEFAULT_TIME_DST			0
 #define DEFAULT_PRIMARY_SD  2

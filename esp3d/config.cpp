@@ -171,7 +171,7 @@ bool CONFIG::InitBaudrate(long value)
 
     //setup serial
     //TODO define baudrate for each Serial
-#ifdef USE_SERIAL_0
+#if defined(USE_SERIAL_0) || (defined( DEBUG_ESP3D) && defined(DEBUG_OUTPUT_SERIAL))
     if (Serial.baudRate() != baud_rate) {
 #ifdef ARDUINO_ARCH_ESP8266
 	Serial.begin (baud_rate);
