@@ -589,6 +589,126 @@ void WebUpdateUpload (AsyncWebServerRequest *request, String filename, size_t in
 }
 #endif
 
+#ifdef PRINTER_FW_UPDATE_FEATURE
+
+void startPrinterFWUpdate(AsyncWebServerRequest *request)
+{
+    LOG("startPrinterFWUpdate\r\n");
+
+    level_authenticate_type auth_level = web_interface->is_authenticated();
+    if (auth_level != LEVEL_ADMIN) {
+        web_interface->_upload_status = UPLOAD_STATUS_NONE;
+        request->send (403, "text/plain", "Not allowed, log in first!\n");
+        return;
+    }
+    
+    #ifdef USE_SERIAL_0
+        HardwareSerial* usedSerial = &Serial;
+    #endif
+    #ifdef USE_SERIAL_1
+        HardwareSerial* usedSerial = &Serial1;
+    #endif
+    #ifdef USE_SERIAL_2
+        HardwareSerial* usedSerial = &Serial2;
+    #endif  
+
+#ifdef PRINTER_UC_STM32
+#define STM32_ACK 0x79
+#define STM32_NACK 0x1F
+
+    if ( (web_interface->blockserial) == false) {
+        LOG("Block Serial\r\n");
+        web_interface->blockserial = true;
+
+        usedSerial->flush();
+        LOG ("1 PurgeSerial\r\n")
+        ESPCOM::processFromSerial (true);
+        LOG ("2 PurgeSerial\r\n")
+        ESPCOM::processFromSerial (true);
+        LOG ("End PurgeSerial\r\n")
+        
+        LOG ("updateBaudRate\r\n")
+        usedSerial->updateBaudRate(115200);
+        CONFIG::wait (1);
+        LOG ("SerialX.end\r\n")
+        usedSerial->end();
+        CONFIG::wait (1);
+        LOG ("SerialX.begin\r\n")
+        usedSerial->begin (115200, SERIAL_8E1, ESP_RX_PIN, ESP_TX_PIN);
+        CONFIG::wait (1);
+
+        LOG ("PRINTER_UC_BOOTMODE_PIN 0\r\n")
+        digitalWrite(PRINTER_UC_BOOTMODE_PIN, 0);
+        LOG ("PRINTER_UC_RESET_PIN 0\r\n")
+        digitalWrite(PRINTER_UC_RESET_PIN, 0);
+        CONFIG::wait (1);
+        LOG ("PRINTER_UC_RESET_PIN 1\r\n")
+        digitalWrite(PRINTER_UC_RESET_PIN, 1);
+        CONFIG::wait (1);
+
+        usedSerial->setTimeout(1000);       
+        usedSerial->write(0x7F); //Send Init comand
+        uint8_t buffer[16]={0};
+        if(0 == usedSerial->readBytes(buffer,2)){
+            request->send (200, "text/plain", "uC Reset failed, no answer received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+
+        if(buffer[0]!=0x79 && buffer[1]!=0x79) { //TODO: is second 0x79 needed?
+            LOG("Wrong Answer:")
+            LOG(String((char)buffer[0]))
+            LOG("\r\n")
+            LOG(String((char)buffer[1]))
+            LOG("\r\n")
+            request->send (200, "text/plain", "uC Reset failed, wrong answer received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+
+        LOG("Get Version and Device infos: ")
+        buffer[0]=0x00;
+        buffer[1]=0xFF;
+        usedSerial->write(buffer,2);
+        if(0 == usedSerial->readBytes(buffer,15)){
+            request->send (200, "text/plain", "uC Reset failed, no answer Version received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+
+        LOG((char*)buffer)
+        request->send (200, "text/plain", (String)"uC Reset okay | " + String((char*)buffer)); 
+    }
+    else {
+        LOG("Seriel Blocked")
+        request->send (200, "text/plain", "uC Reset failed, Seriel Blocked");
+    }
+
+#else
+    request->send (501, "text/plain", "Unsuported uC");
+#endif //PRINTER_UC_STM32
+}
+
+    void printerUpdateHandle (AsyncWebServerRequest *request)
+    {
+        LOG("\r\nprinterUpdateHandle\r\n")  
+
+        web_interface->blockserial = false;
+        LOG ("\r\nRelease Serial\r\n")
+    }
+
+    void printerUpdateWebUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+    {
+        LOG("\r\nprinterUpdateWebUpload\r\n");
+       
+        
+    
+    }
+#endif //PRINTER_FW_UPDATE_FEATURE
+
 //Not found Page handler //////////////////////////////////////////////////////////
 void handle_not_found (AsyncWebServerRequest *request)
 {

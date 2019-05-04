@@ -265,6 +265,18 @@ void  CONFIG::InitPins()
     pinMode (RESET_CONFIG_PIN, INPUT);
 #endif
 
+#ifdef PRINTER_FW_UPDATE_FEATURE
+    #ifdef PRINTER_UC_RESET_PIN
+        pinMode (PRINTER_UC_RESET_PIN, OUTPUT);
+        digitalWrite(PRINTER_UC_RESET_PIN, 1);
+    #endif
+
+    #ifdef PRINTER_UC_BOOTMODE_PIN
+        pinMode (PRINTER_UC_BOOTMODE_PIN, OUTPUT);
+        digitalWrite(PRINTER_UC_BOOTMODE_PIN, 0);
+    #endif
+#endif
+
 #ifdef DHT_FEATURE
     CONFIG::InitDHT();
 #endif

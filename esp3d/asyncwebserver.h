@@ -45,5 +45,11 @@ extern void handleUpdate (AsyncWebServerRequest *request);
 extern void WebUpdateUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 #endif
 
+#ifdef  PRINTER_FW_UPDATE_FEATURE
+  extern void startPrinterFWUpdate (AsyncWebServerRequest *request);
+  extern void printerUpdateHandle (AsyncWebServerRequest *request);
+  extern void printerUpdateWebUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+#endif
+
 
 #endif

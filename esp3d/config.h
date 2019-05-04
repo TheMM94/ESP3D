@@ -64,8 +64,17 @@
 //WEB_UPDATE_FEATURE: allow to flash fw using web UI
 #define WEB_UPDATE_FEATURE
 
+//PRINTER_FW_UPDATE_FEATURE: allow to flash fw of the 3D Pritner using web UI
+#define PRINTER_FW_UPDATE_FEATURE
+//PRINTER_UC_STM32: 3D Printer uses STM32 Microcontroller
+#define PRINTER_UC_STM32
+//PRINTER_UC_RESET_PIN: Pin to reset uC
+#define PRINTER_UC_RESET_PIN 13
+//PRINTER_UC_BOOTMODE_PIN: Pin to change pC Boot Mode
+#define PRINTER_UC_BOOTMODE_PIN 12
+
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
-#define RECOVERY_FEATURE
+//#define RECOVERY_FEATURE
 
 //DIRECT_PIN_FEATURE: allow to access pin using ESP201 command
 #define DIRECT_PIN_FEATURE
