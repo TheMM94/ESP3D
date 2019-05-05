@@ -603,13 +603,13 @@ void startPrinterFWUpdate(AsyncWebServerRequest *request)
     }
     
     #ifdef USE_SERIAL_0
-        HardwareSerial* usedSerial = &Serial;
+       HardwareSerial* usedSerial = &Serial;
     #endif
     #ifdef USE_SERIAL_1
-        HardwareSerial* usedSerial = &Serial1;
+       HardwareSerial* usedSerial = &Serial1;
     #endif
     #ifdef USE_SERIAL_2
-        HardwareSerial* usedSerial = &Serial2;
+       HardwareSerial* usedSerial = &Serial2;
     #endif  
 
 #ifdef PRINTER_UC_STM32
@@ -650,6 +650,7 @@ void startPrinterFWUpdate(AsyncWebServerRequest *request)
         usedSerial->write(0x7F); //Send Init comand
         uint8_t buffer[16]={0};
         if(0 == usedSerial->readBytes(buffer,2)){
+            LOG ("uC Reset failed 1\r\n")
             request->send (200, "text/plain", "uC Reset failed, no answer received. Restarting ESP");
             CONFIG::wait (1000);
             ESP.restart();  
@@ -671,8 +672,9 @@ void startPrinterFWUpdate(AsyncWebServerRequest *request)
         LOG("Get Version and Device infos: ")
         buffer[0]=0x00;
         buffer[1]=0xFF;
-        usedSerial->write(buffer,2);
+        usedSerial->write(buffer,2);    //Send Get
         if(0 == usedSerial->readBytes(buffer,15)){
+            LOG ("uC Reset failed 2\r\n")
             request->send (200, "text/plain", "uC Reset failed, no answer Version received. Restarting ESP");
             CONFIG::wait (1000);
             ESP.restart();  
@@ -692,21 +694,187 @@ void startPrinterFWUpdate(AsyncWebServerRequest *request)
 #endif //PRINTER_UC_STM32
 }
 
-    void printerUpdateHandle (AsyncWebServerRequest *request)
-    {
-        LOG("\r\nprinterUpdateHandle\r\n")  
+#ifdef PRINTER_UC_STM32 //PRINTER_UC_STM32
+uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum=0){
+    for(size_t i=0; i<len; i++)
+        checksum^=data[i];
+    return checksum;
+}
+#endif //PRINTER_UC_STM32
 
-        web_interface->blockserial = false;
-        LOG ("\r\nRelease Serial\r\n")
+void printerUpdateHandle (AsyncWebServerRequest *request)
+{
+    LOG("\r\nprinterUpdateHandle\r\n")  
+
+    level_authenticate_type auth_level = web_interface->is_authenticated();
+    if (auth_level != LEVEL_ADMIN) {
+        web_interface->_upload_status = UPLOAD_STATUS_NONE;
+        request->send (403, "text/plain", "Not allowed, log in first!\n");
+        return;
     }
-
-    void printerUpdateWebUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-    {
-        LOG("\r\nprinterUpdateWebUpload\r\n");
-       
-        
     
+    request->send (200, "text/plain", "uC Update Sucessful, Restaring uC and ESP");
+
+    web_interface->blockserial = false;
+    LOG ("\r\nRelease Serial\r\n")
+    CONFIG::wait (1000);
+    ESP.restart(); 
+}
+
+void printerUpdateWebUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+    LOG("\r\nprinterUpdateWebUpload\r\nData Size:");
+    LOG(len)
+    LOG("\r\n")
+
+    level_authenticate_type auth_level = web_interface->is_authenticated();
+    if (auth_level != LEVEL_ADMIN) {
+        web_interface->_upload_status = UPLOAD_STATUS_NONE;
+        request->send (403, "text/plain", "Not allowed, log in first!\n");
+        return;
     }
+
+    #ifdef USE_SERIAL_0
+        HardwareSerial* usedSerial = &Serial;
+    #endif
+    #ifdef USE_SERIAL_1
+        HardwareSerial* usedSerial = &Serial1;
+    #endif
+    #ifdef USE_SERIAL_2
+        HardwareSerial* usedSerial = &Serial2;
+    #endif  
+
+#ifdef PRINTER_UC_STM32
+#define FW_START_ADDRESS 0
+    static size_t alreadyWritenAddress=0;
+    static uint8_t restData[3];
+    static uint8_t restSize=0;
+
+    if(!index) {
+        LOG ("New Printer FW uploade started\r\n")   
+        alreadyWritenAddress=0;
+        restSize=0;        
+    }
+
+    size_t endCurrentUploadeAddress=alreadyWritenAddress+len+restSize;
+    size_t dataReadPosition=0;
+
+    while(alreadyWritenAddress<endCurrentUploadeAddress){
+        size_t currentWriteSize=len+restSize-dataReadPosition;
+        if(currentWriteSize>256)
+            currentWriteSize=256;
+        
+        //STM32 allows only to write in 4 Byte blocks.  
+        //If the rest of the current part of the uploaded FW is smaller then 4 Byte, store the data for the next uploaded part of the FW.
+        size_t rest=currentWriteSize%4;
+        if(currentWriteSize<4){
+            memcpy(restData, &data[dataReadPosition], rest);
+            restSize=rest;
+            LOG("\r\nRest Size: ")
+            LOG(restSize)
+            LOG("\r\n")
+            break;
+        }  
+        if(rest!=0)
+            currentWriteSize-=rest;   
+    
+        uint8_t buffer[5]={0x31,0xCE};
+        usedSerial->write(buffer,2);    //Send Write Memory
+        if(0 == usedSerial->readBytes(buffer,1)){
+            LOG ("uC no answer 1\r\n")
+            request->send (500, "text/plain", "uC write failed 1, no answer received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+        if(STM32_ACK!=buffer[0]){
+            LOG ("uC write failed 1\r\n")
+            request->send (500, "text/plain", "uC write failed 1, no ACK received. Restarting ESP");
+           /* CONFIG::wait (1000);
+            ESP.restart();  
+            return;*/
+        }
+
+        *buffer=(uint32_t) (FW_START_ADDRESS+alreadyWritenAddress);
+        buffer[4]=stm32_checksum(buffer,4);
+        usedSerial->write(buffer,5);    //Send write Address
+        if(0 == usedSerial->readBytes(buffer,1)){
+            LOG ("uC no answer 2\r\n")
+            request->send (500, "text/plain", "uC write failed 2, no answer received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+        if(STM32_ACK!=buffer[0]){
+            LOG ("uC write failed 2\r\n")
+            request->send (500, "text/plain", "uC write failed 2, no ACK received. Restarting ESP");
+           /* CONFIG::wait (1000);
+            ESP.restart();  
+            return;*/
+        }
+
+        alreadyWritenAddress+=currentWriteSize;
+        buffer[0]=currentWriteSize-1;
+        uint8_t checksum=stm32_checksum(buffer,1);
+        usedSerial->write(buffer,1);
+        
+        //Send rest Data if upload before was not 4 Byte
+        if(restSize>0){
+            LOG("Write Rest: ")
+            LOG(restSize)
+            LOG("\r\n")
+            currentWriteSize-=restSize; 
+            checksum=stm32_checksum(restData,restSize,checksum);
+            usedSerial->write(restData,restSize);
+            restSize=0;
+        }
+
+        LOG("Write Data: ")
+        LOG(currentWriteSize)
+        LOG("\r\n")
+        usedSerial->write(&data[dataReadPosition], currentWriteSize);   //Send FW Data
+        checksum=stm32_checksum(&data[dataReadPosition],currentWriteSize,checksum);
+        usedSerial->write(checksum);    //Send Checksum
+        dataReadPosition+=currentWriteSize;   
+
+        if(0 == usedSerial->readBytes(buffer,1)){
+            LOG ("uC no answer 3\r\n")
+            request->send (200, "text/plain", "uC write failed 3, no answer received. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+        if(STM32_ACK!=buffer[0]){
+            LOG ("uC write failed 3\r\n")
+            request->send (200, "text/plain", "uC write failed 3, no ACK received. Restarting ESP");
+            /*CONFIG::wait (1000);
+            ESP.restart();  
+            return;*/
+        }
+    }
+
+    if(final){
+        if(restSize>0)   {
+            LOG ("FW size fail\r\n")
+            request->send (200, "text/plain", "uC write failed , FW size not multiple of 4 Byte. Restarting ESP");
+            CONFIG::wait (1000);
+            ESP.restart();  
+            return;
+        }
+
+        LOG ("PRINTER_UC_RESET_PIN 0\r\n")
+        digitalWrite(PRINTER_UC_RESET_PIN, 0);
+        CONFIG::wait (1);
+        LOG ("PRINTER_UC_BOOTMODE_PIN 1\r\n")
+        digitalWrite(PRINTER_UC_BOOTMODE_PIN, 1);
+        LOG ("PRINTER_UC_RESET_PIN 1\r\n")
+        digitalWrite(PRINTER_UC_RESET_PIN, 1);
+        CONFIG::wait (1);
+    }
+#else
+    request->send (501, "text/plain", "Unsuported uC");
+#endif //PRINTER_UC_STM32
+}
 #endif //PRINTER_FW_UPDATE_FEATURE
 
 //Not found Page handler //////////////////////////////////////////////////////////

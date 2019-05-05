@@ -49,6 +49,10 @@ extern void WebUpdateUpload (AsyncWebServerRequest *request, String filename, si
   extern void startPrinterFWUpdate (AsyncWebServerRequest *request);
   extern void printerUpdateHandle (AsyncWebServerRequest *request);
   extern void printerUpdateWebUpload (AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+
+#ifdef PRINTER_UC_STM32
+  extern uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum=0);
+#endif
 #endif
 
 
