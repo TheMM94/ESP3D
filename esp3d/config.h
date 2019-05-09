@@ -40,7 +40,7 @@
 //FEATURES - comment to disable //////////////////////////////////////////////////////////
 
 //Do we use async webserver or not
-#define ASYNCWEBSERVER
+//#define ASYNCWEBSERVER
 
 //SERIAL_COMMAND_FEATURE: allow to send command by serial
 #define SERIAL_COMMAND_FEATURE
@@ -69,9 +69,9 @@
 //PRINTER_UC_STM32: 3D Printer uses STM32 Microcontroller
 #define PRINTER_UC_STM32
 //PRINTER_UC_RESET_PIN: Pin to reset uC
-#define PRINTER_UC_RESET_PIN 13
+#define PRINTER_UC_RESET_PIN 19
 //PRINTER_UC_BOOTMODE_PIN: Pin to change pC Boot Mode
-#define PRINTER_UC_BOOTMODE_PIN 12
+#define PRINTER_UC_BOOTMODE_PIN 18
 
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
 //#define RECOVERY_FEATURE

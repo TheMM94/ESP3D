@@ -45,4 +45,14 @@ extern void handleUpdate ();
 extern void WebUpdateUpload ();
 #endif
 
+#ifdef  PRINTER_FW_UPDATE_FEATURE
+  extern void startPrinterFWUpdate ();
+  extern void printerUpdateHandle ();
+  extern void printerUpdateWebUpload ();
+
+#ifdef PRINTER_UC_STM32
+  extern uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum=0);
+#endif
+#endif
+
 #endif
