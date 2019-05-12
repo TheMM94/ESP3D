@@ -47,7 +47,7 @@ extern void WebUpdateUpload ();
 
 #ifdef  PRINTER_FW_UPDATE_FEATURE
   extern void startPrinterFWUpdate ();
-  extern void printerUpdateHandle ();
+  extern void printerUpdateEnd ();
   extern void printerUpdateWebUpload ();
 
 #ifdef PRINTER_UC_STM32

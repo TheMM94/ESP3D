@@ -349,7 +349,7 @@ WEBINTERFACE_CLASS::WEBINTERFACE_CLASS (int port) : web_server (port)
 
 #ifdef  PRINTER_FW_UPDATE_FEATURE
     web_server.on ("/StartPrinterFWUpdate", HTTP_ANY, startPrinterFWUpdate);
-    web_server.on ("/UploadePrinterFW", HTTP_ANY, printerUpdateHandle, printerUpdateWebUpload);
+    web_server.on ("/UploadePrinterFW", HTTP_ANY, printerUpdateEnd, printerUpdateWebUpload);
 #endif
 
     //Page not found handler

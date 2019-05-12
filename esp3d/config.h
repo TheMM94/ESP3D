@@ -68,6 +68,8 @@
 #define PRINTER_FW_UPDATE_FEATURE
 //PRINTER_UC_STM32: 3D Printer uses STM32 Microcontroller
 #define PRINTER_UC_STM32
+//STM32 Serial Update Speed
+#define STM32_UPDATE_SPEED 115200
 //PRINTER_UC_RESET_PIN: Pin to reset uC
 #define PRINTER_UC_RESET_PIN 19
 //PRINTER_UC_BOOTMODE_PIN: Pin to change pC Boot Mode
@@ -360,7 +362,7 @@ const byte DEFAULT_AP_IP_MODE = 				STATIC_IP_MODE;
 const byte DEFAULT_IP_VALUE[]   =	        {192, 168, 0, 1};
 const byte DEFAULT_MASK_VALUE[]  =	        {255, 255, 255, 0};
 #define DEFAULT_GATEWAY_VALUE   	        DEFAULT_IP_VALUE
-const long DEFAULT_BAUD_RATE =			115200;
+const long DEFAULT_BAUD_RATE =			250000;
 #define DEFAULT_PHY_MODE			WIFI_PHY_MODE_11G
 #define DEFAULT_SLEEP_MODE			WIFI_MODEM_SLEEP
 #define DEFAULT_CHANNEL				11
