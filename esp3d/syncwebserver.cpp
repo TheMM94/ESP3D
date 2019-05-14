@@ -798,6 +798,9 @@ void startPrinterFWUpdate()
         usedSerial->begin (STM32_UPDATE_SPEED, SERIAL_8E1, ESP_RX_PIN, ESP_TX_PIN);
         CONFIG::wait (100);
 
+        LOG ("Change PINs\r\n")
+        pinMode (PRINTER_UC_RESET_PIN, OUTPUT);
+        pinMode (PRINTER_UC_BOOTMODE_PIN, OUTPUT);
         LOG ("PRINTER_UC_BOOTMODE_PIN 1\r\n")
         digitalWrite(PRINTER_UC_BOOTMODE_PIN, 1);
         LOG ("PRINTER_UC_RESET_PIN 0\r\n")
@@ -832,8 +835,8 @@ void startPrinterFWUpdate()
         buffer[1]=0xFF;
         usedSerial->write(buffer,2);    //Send Get
         if(0 == usedSerial->readBytes(buffer,15)){
-            LOG ("uC Reset failed, no answer Version received. Restarting ESP\r\n")
-            printerUpdateFWError="uC Reset failed, no answer Version received. Restarting ESP";
+            LOG ("uC Reset failed, no answer Version received\r\n")
+            printerUpdateFWError="uC Reset failed, no answer Version received";
             web_interface->_upload_status=UPLOAD_STATUS_FAILED;
             return;
         }
@@ -855,7 +858,16 @@ void startPrinterFWUpdate()
 #endif //PRINTER_UC_STM32
 }
 
-#ifdef PRINTER_UC_STM32 //PRINTER_UC_STM32
+#ifdef PRINTER_UC_STM32
+inline void swap4Bytes(uint8_t* data){
+    uint8_t temp=data[0];
+    data[0]=data[3];
+    data[3]=temp;
+    temp=data[1];
+    data[1]=data[2];
+    data[2]=temp;
+}
+
 uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum){
     for(size_t i=0; i<len; i++)
         checksum^=data[i];
@@ -902,6 +914,7 @@ void printerUpdateEnd ()
         web_interface->web_server.send(500,"text/plain","uC Update Failed Unknown Status. Status: "+String((int)web_interface->_upload_status)+"Error: "+printerUpdateFWError);    
     }
     web_interface->_upload_status=UPLOAD_STATUS_NONE;
+    printerUpdateFWError="";
  
 #ifdef PRINTER_UC_STM32
     LOG ("PRINTER_UC_BOOTMODE_PIN 0\r\n")
@@ -912,6 +925,10 @@ void printerUpdateEnd ()
     LOG ("PRINTER_UC_RESET_PIN 1\r\n")
     digitalWrite(PRINTER_UC_RESET_PIN, 1);
     CONFIG::wait (100);
+
+    LOG ("Change PINs\r\n")
+    pinMode (PRINTER_UC_RESET_PIN, INPUT_PULLUP);
+    pinMode (PRINTER_UC_BOOTMODE_PIN, INPUT_PULLDOWN);
 
     LOG ("SerialX.end\r\n")
     usedSerial->end();
@@ -964,7 +981,7 @@ void printerUpdateWebUpload ()
     }
 
 #ifdef PRINTER_UC_STM32
-#define FW_START_ADDRESS 0
+#define FW_START_ADDRESS (uint32_t) 0x8000000
     static size_t alreadyWritenAddress=0;
     static uint8_t restData[3];
     static uint8_t restSize=0;
@@ -972,13 +989,28 @@ void printerUpdateWebUpload ()
     if(upload.status == UPLOAD_FILE_START) {
         LOG ("New Printer FW uploade started\r\n")   
         alreadyWritenAddress=0;
-        restSize=0;        
+        restSize=0;       
     }
+
+    LOG("Swap\r\n")
+    //Swap the Order of the Data bsince the first byte of a 32bit Word needs to contain the MSB
+    //Swap Rest Data
+    if(restSize!=0) {
+        uint8_t tempArray[4];
+        memcpy(tempArray, restData, restSize);
+        memcpy(&tempArray[restSize-1], upload.buf, 4-restSize);
+        swap4Bytes(tempArray);
+        memcpy(restData, tempArray, restSize);
+        memcpy(upload.buf, &tempArray[restSize-1], 4-restSize);
+    }
+    //Swap the new Data
+    for(size_t i=restSize; i+3<upload.currentSize; i+=4)
+        swap4Bytes(&upload.buf[i]);
 
     size_t endCurrentUploadeAddress=alreadyWritenAddress+upload.currentSize+restSize;
     size_t dataReadPosition=0;
 
-    while(alreadyWritenAddress<endCurrentUploadeAddress){
+    while(alreadyWritenAddress<endCurrentUploadeAddress && upload.currentSize>0){
         size_t currentWriteSize=upload.currentSize+restSize-dataReadPosition;
         if(currentWriteSize>256)
             currentWriteSize=256;
@@ -996,12 +1028,12 @@ void printerUpdateWebUpload ()
         }  
         if(rest!=0)
             currentWriteSize-=rest;   
-    
+
         uint8_t buffer[5]={0x31,0xCE};
         usedSerial->write(buffer,2);    //Send Write Memory
         if(0 == usedSerial->readBytes(buffer,1)){
             LOG ("uC write request failed 1, no answer received\r\n")
-           printerUpdateFWError="uC write request failed, no answer received";
+            printerUpdateFWError="uC write request failed, no answer received";
             web_interface->_upload_status=UPLOAD_STATUS_FAILED;
             return;
         }
@@ -1012,8 +1044,23 @@ void printerUpdateWebUpload ()
             return;
         }
 
-        *buffer=(uint32_t) (FW_START_ADDRESS+(alreadyWritenAddress/4));
+        LOG("alreadyWritenAddress")
+        LOG(alreadyWritenAddress)
+        //Swap bytes in the Address since the first byte (buffer[0]) needs to contain the MSB
+        uint32_t tempAddress=(FW_START_ADDRESS+alreadyWritenAddress);
+        memcpy(buffer,&tempAddress,4);
+        swap4Bytes(buffer);
         buffer[4]=stm32_checksum(buffer,4);
+        LOG("\r\n")
+        LOG((uint32_t) buffer[0])
+        LOG("\r\n")
+        LOG((uint32_t) buffer[1])
+        LOG("\r\n")
+        LOG((uint32_t) buffer[2])
+        LOG("\r\n")
+        LOG((uint32_t) buffer[3])
+        LOG("\r\n")
+
         usedSerial->write(buffer,5);    //Send write Address
         if(0 == usedSerial->readBytes(buffer,1)){
             LOG ("uC Address send failed, no answer received\r\n")
@@ -1079,7 +1126,7 @@ void printerUpdateWebUpload ()
 #else
     LOG ("Unsuported uC\r\n")
     web_interface->web_server.send(501,"Unsuported uC");
-#endif //PRINTER_UC_STM32*/
+#endif //PRINTER_UC_STM32
 }
 #endif //PRINTER_FW_UPDATE_FEATURE
 

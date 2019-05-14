@@ -267,13 +267,11 @@ void  CONFIG::InitPins()
 
 #ifdef PRINTER_FW_UPDATE_FEATURE
     #ifdef PRINTER_UC_RESET_PIN
-        pinMode (PRINTER_UC_RESET_PIN, OUTPUT);
-        digitalWrite(PRINTER_UC_RESET_PIN, 1);
+        pinMode (PRINTER_UC_RESET_PIN, INPUT_PULLUP);
     #endif
 
     #ifdef PRINTER_UC_BOOTMODE_PIN
-        pinMode (PRINTER_UC_BOOTMODE_PIN, OUTPUT);
-        digitalWrite(PRINTER_UC_BOOTMODE_PIN, 0);
+        pinMode (PRINTER_UC_BOOTMODE_PIN, INPUT_PULLDOWN);
     #endif
 #endif
 
