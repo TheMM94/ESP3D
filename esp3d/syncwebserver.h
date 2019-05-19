@@ -53,6 +53,7 @@ extern void WebUpdateUpload ();
 #ifdef PRINTER_UC_STM32
   extern void swap4Bytes(uint8_t* data);
   extern uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum=0);
+  extern void resetSerial();
 #endif
 #endif
 

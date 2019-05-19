@@ -59,7 +59,7 @@
 #define NETBIOS_FEATURE
 
 //CAPTIVE_PORTAL_FEATURE: In SoftAP redirect all unknow call to main page
-#define CAPTIVE_PORTAL_FEATURE
+//#define CAPTIVE_PORTAL_FEATURE
 
 //WEB_UPDATE_FEATURE: allow to flash fw using web UI
 #define WEB_UPDATE_FEATURE
