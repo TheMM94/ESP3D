@@ -844,9 +844,9 @@ void startPrinterFWUpdate()
             return;
         }
 
-        LOG((char*)buffer)
+        LOG(String((const char*)buffer))
         LOG("\r\n")
-        web_interface->web_server.send(200,"text/plain",(String)"uC Reset okay | " + String((char*)buffer));
+        web_interface->web_server.send(200,"text/plain",(String)"uC Reset okay | " + String((const char*)buffer));
     }
     else {
         LOG("Seriel Blocked\r\n")
@@ -1003,7 +1003,7 @@ void printerUpdateWebUpload ()
         LOG("UPLOAD_FILE_WRITE\r\nSwap\r\n")
         //Swap the Order of the Data bsince the first byte of a 32bit Word needs to contain the MSB
         //Swap Rest Data
-        if(restSize!=0) {
+     /*   if(restSize!=0) {
             uint8_t tempArray[4];
             memcpy(tempArray, restData, restSize);
             memcpy(&tempArray[restSize-1], upload.buf, 4-restSize);
@@ -1014,7 +1014,7 @@ void printerUpdateWebUpload ()
         //Swap the new Data
         for(size_t i=restSize; i+3<upload.currentSize; i+=4){
             swap4Bytes(&upload.buf[i]);
-        }
+        }*/
 
         size_t endCurrentUploadeAddress=alreadyWritenAddress+upload.currentSize+restSize;
         size_t dataReadPosition=0;

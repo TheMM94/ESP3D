@@ -66,6 +66,8 @@
 
 //PRINTER_FW_UPDATE_FEATURE: allow to flash fw of the 3D Pritner using web UI
 #define PRINTER_FW_UPDATE_FEATURE
+
+#ifdef PRINTER_FW_UPDATE_FEATURE
 //PRINTER_UC_STM32: 3D Printer uses STM32 Microcontroller
 #define PRINTER_UC_STM32
 //STM32 Serial Update Speed
@@ -74,6 +76,7 @@
 #define PRINTER_UC_RESET_PIN 19
 //PRINTER_UC_BOOTMODE_PIN: Pin to change pC Boot Mode
 #define PRINTER_UC_BOOTMODE_PIN 18
+#endif
 
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
 //#define RECOVERY_FEATURE
