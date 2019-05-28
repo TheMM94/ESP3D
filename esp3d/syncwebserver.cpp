@@ -54,6 +54,10 @@
     #endif
 #endif
 
+#ifdef PRINTER_UC_STM32
+    #include <byteswap.h>
+#endif PRINTER_UC_STM32
+
 //embedded response file if no files on SPIFFS
 #include "nofile.h"
 #include "syncwebserver.h"
@@ -806,6 +810,15 @@ void startPrinterFWUpdate()
         LOG ("PRINTER_UC_RESET_PIN 0\r\n")
         digitalWrite(PRINTER_UC_RESET_PIN, 0);
         CONFIG::wait (100);
+
+        usedSerial->flush();
+        LOG ("3 PurgeSerial\r\n")
+        ESPCOM::processFromSerial (true);
+        LOG ("4 PurgeSerial\r\n")
+        ESPCOM::processFromSerial (true);
+        LOG ("End PurgeSerial\r\n")
+        CONFIG::wait (100);
+
         LOG ("PRINTER_UC_RESET_PIN 1\r\n")
         digitalWrite(PRINTER_UC_RESET_PIN, 1);
         CONFIG::wait (100);
@@ -824,8 +837,9 @@ void startPrinterFWUpdate()
 
         if(buffer[0]!=STM32_ACK) {
             LOG("uC Reset failed, wrong answer received: ")
-            LOG((char*)buffer)
+            LOG((const char*)buffer)
             LOG("\r\n")
+
             web_interface->web_server.send(200,"text/plain","uC Reset failed, wrong answer received");
             web_interface->_upload_status=UPLOAD_STATUS_FAILED;
             resetSerial();
@@ -846,7 +860,55 @@ void startPrinterFWUpdate()
 
         LOG(String((const char*)buffer))
         LOG("\r\n")
-        web_interface->web_server.send(200,"text/plain",(String)"uC Reset okay | " + String((const char*)buffer));
+
+        LOG("Sende Erase Flash\r\n")
+        buffer[0]=0x43;
+        buffer[1]=0xBC;
+        usedSerial->write(buffer,2);    //Send Erase
+        if(0 == usedSerial->readBytes(buffer,1)){
+            LOG ("uC Erase failed, no answer Version received\r\n")
+            web_interface->web_server.send(200,"text/plain","uC Erase failed, no answer Version received");
+            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
+            resetSerial();
+            return;
+        }
+        
+        if(buffer[0]!=STM32_ACK) {
+            LOG("uC Erase failed, wrong answer received: ")
+            LOG((const char*)buffer)
+            LOG("\r\n")
+
+            web_interface->web_server.send(200,"text/plain","uC Erase failed, wrong answer received");
+            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
+            resetSerial();
+            return;
+        }
+
+        LOG("Erash All\r\n")
+        buffer[0]=0xFF;
+        buffer[1]=0x00;
+        usedSerial->write(buffer,2);  //Send Erase All  
+        if(0 == usedSerial->readBytes(buffer,1)){
+            LOG ("uC Erase all failed, no answer Version received\r\n")
+            web_interface->web_server.send(200,"text/plain","uC Erase all failed, no answer Version received");
+            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
+            resetSerial();
+            return;
+        }
+        
+        if(buffer[0]!=STM32_ACK) {
+            LOG("uC Erase All failed, wrong answer received: ")
+            LOG((const char*)buffer)
+            LOG("\r\n")
+
+            web_interface->web_server.send(200,"text/plain","uC Erase all failed, wrong answer received");
+            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
+            resetSerial();
+            return;
+        }
+
+        LOG("uC Reset and Erase okay\r\n")
+        web_interface->web_server.send(200,"text/plain",(String)"uC Reset okay");
     }
     else {
         LOG("Seriel Blocked\r\n")
@@ -862,15 +924,6 @@ void startPrinterFWUpdate()
 }
 
 #ifdef PRINTER_UC_STM32
-inline void swap4Bytes(uint8_t* data){
-    uint8_t temp=data[0];
-    data[0]=data[3];
-    data[3]=temp;
-    temp=data[1];
-    data[1]=data[2];
-    data[2]=temp;
-}
-
 uint8_t stm32_checksum(uint8_t *data, size_t len, uint8_t checksum){
     for(size_t i=0; i<len; i++)
         checksum^=data[i];
@@ -1001,20 +1054,6 @@ void printerUpdateWebUpload ()
         restSize=0;       
     } else if(upload.status == UPLOAD_FILE_WRITE){
         LOG("UPLOAD_FILE_WRITE\r\nSwap\r\n")
-        //Swap the Order of the Data bsince the first byte of a 32bit Word needs to contain the MSB
-        //Swap Rest Data
-     /*   if(restSize!=0) {
-            uint8_t tempArray[4];
-            memcpy(tempArray, restData, restSize);
-            memcpy(&tempArray[restSize-1], upload.buf, 4-restSize);
-            swap4Bytes(tempArray);
-            memcpy(restData, tempArray, restSize);
-            memcpy(upload.buf, &tempArray[restSize-1], 4-restSize);
-        }
-        //Swap the new Data
-        for(size_t i=restSize; i+3<upload.currentSize; i+=4){
-            swap4Bytes(&upload.buf[i]);
-        }*/
 
         size_t endCurrentUploadeAddress=alreadyWritenAddress+upload.currentSize+restSize;
         size_t dataReadPosition=0;
@@ -1056,9 +1095,8 @@ void printerUpdateWebUpload ()
             LOG("alreadyWritenAddress: ")
             LOG(alreadyWritenAddress)
             //Swap bytes in the Address since the first byte (buffer[0]) needs to contain the MSB
-            uint32_t tempAddress=(FW_START_ADDRESS+alreadyWritenAddress);
+            uint32_t tempAddress=__bswap_32((uint32_t) FW_START_ADDRESS + alreadyWritenAddress);
             memcpy(buffer,&tempAddress,4);
-            swap4Bytes(buffer);
             buffer[4]=stm32_checksum(buffer,4);
             LOG("\r\nAddress Swapt Byte: ")
             LOG((uint32_t) buffer[0])
