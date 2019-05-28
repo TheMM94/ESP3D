@@ -31,7 +31,7 @@
 #define ESP_MANUFACTURER_NAME "Espressif Systems"
 #define ESP_MANUFACTURER_URL "http://espressif.com"
 //default name if no mac address is valid
-#define ESP_DEFAULT_NAME "FHNW-3D-Printer"
+#define ESP_DEFAULT_NAME "FHNW-3D-Printer-Group8"
 //if commented name will follow mac address 3 last digits
 //like ESP_XXXXXX (eg:ESP_028E41) to avoid overlap if several ESP3D
 #define ESP_HOST_NAME ESP_DEFAULT_NAME
@@ -79,7 +79,7 @@
 #endif
 
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
-//#define RECOVERY_FEATURE
+#define RECOVERY_FEATURE
 
 //DIRECT_PIN_FEATURE: allow to access pin using ESP201 command
 #define DIRECT_PIN_FEATURE
@@ -153,9 +153,9 @@
 
 //DEBUG Flag do not do this when connected to printer !!!
 //be noted all upload may failed if enabled
-#define DEBUG_ESP3D
+//#define DEBUG_ESP3D
 //#define DEBUG_OUTPUT_SPIFFS
-#define DEBUG_OUTPUT_SERIAL
+//#define DEBUG_OUTPUT_SERIAL
 //#define DEBUG_OUTPUT_TCP
 
 //Sanity check
@@ -356,9 +356,9 @@ typedef enum {
 
 //default values
 #define DEFAULT_WIFI_MODE			AP_MODE
-const char DEFAULT_AP_SSID []  PROGMEM =		"FHNW-3D-Printer";
+const char DEFAULT_AP_SSID []  PROGMEM =		"FHNW-3D-Printer-Group8";
 const char DEFAULT_AP_PASSWORD [] PROGMEM =	"12345678";
-const char DEFAULT_STA_SSID []  PROGMEM =		"FHNW-3D-Printer";
+const char DEFAULT_STA_SSID []  PROGMEM =		"FHNW-3D-Printer-Group8";
 const char DEFAULT_STA_PASSWORD [] PROGMEM =	"12345678";
 const byte DEFAULT_STA_IP_MODE  = 				DHCP_MODE;
 const byte DEFAULT_AP_IP_MODE = 				STATIC_IP_MODE;

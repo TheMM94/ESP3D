@@ -56,7 +56,7 @@
 
 #ifdef PRINTER_UC_STM32
     #include <byteswap.h>
-#endif PRINTER_UC_STM32
+#endif
 
 //embedded response file if no files on SPIFFS
 #include "nofile.h"
@@ -908,7 +908,7 @@ void startPrinterFWUpdate()
         }
 
         LOG("uC Reset and Erase okay\r\n")
-        web_interface->web_server.send(200,"text/plain",(String)"uC Reset okay");
+        web_interface->web_server.send(200,"text/plain",(String)"uC Reset and Erase okay");
     }
     else {
         LOG("Seriel Blocked\r\n")
