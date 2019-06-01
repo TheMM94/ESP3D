@@ -788,19 +788,18 @@ void startPrinterFWUpdate()
         web_interface->blockserial = true;
 
         usedSerial->flush();
-        LOG ("1 PurgeSerial\r\n")
-        ESPCOM::processFromSerial (true);
-        LOG ("2 PurgeSerial\r\n")
-        ESPCOM::processFromSerial (true);
-        LOG ("End PurgeSerial\r\n")
-        CONFIG::wait (100);
+        LOG("Start 1 PurgeSerial\r\n")
+        if(ESPCOM::available(DEFAULT_PRINTER_PIPE)) {
+            ESPCOM::bridge();
+            CONFIG::wait(1);
+        }
+        LOG("End 1 PurgeSerial\r\n")
 
         LOG ("SerialX.end\r\n")
         usedSerial->end();
         CONFIG::wait (100);
         LOG ("SerialX.begin\r\n")
         usedSerial->begin (STM32_UPDATE_SPEED, SERIAL_8E1, ESP_RX_PIN, ESP_TX_PIN);
-        CONFIG::wait (100);
 
         LOG ("Change PINs\r\n")
         pinMode (PRINTER_UC_RESET_PIN, OUTPUT);
@@ -812,12 +811,12 @@ void startPrinterFWUpdate()
         CONFIG::wait (100);
 
         usedSerial->flush();
-        LOG ("3 PurgeSerial\r\n")
-        ESPCOM::processFromSerial (true);
-        LOG ("4 PurgeSerial\r\n")
-        ESPCOM::processFromSerial (true);
-        LOG ("End PurgeSerial\r\n")
-        CONFIG::wait (100);
+        LOG("Start 2 PurgeSerial\r\n")
+        if(ESPCOM::available(DEFAULT_PRINTER_PIPE)) {
+            ESPCOM::bridge();
+            CONFIG::wait(1);
+        }
+        LOG("End 2 PurgeSerial\r\n")
 
         LOG ("PRINTER_UC_RESET_PIN 1\r\n")
         digitalWrite(PRINTER_UC_RESET_PIN, 1);
@@ -947,6 +946,7 @@ void resetSerial(){
     LOG ("PRINTER_UC_RESET_PIN 0\r\n")
     digitalWrite(PRINTER_UC_RESET_PIN, 0);
     CONFIG::wait (100);
+    
     LOG ("PRINTER_UC_RESET_PIN 1\r\n")
     digitalWrite(PRINTER_UC_RESET_PIN, 1);
     CONFIG::wait (100);
@@ -960,7 +960,6 @@ void resetSerial(){
     CONFIG::wait (100);
     LOG ("SerialX.begin\r\n")
     CONFIG::InitBaudrate();
-    CONFIG::wait (100);
 
     LOG ("Release Serial\r\n")
     web_interface->blockserial = false;
@@ -1052,30 +1051,34 @@ void printerUpdateWebUpload ()
         LOG ("UPLOAD_FILE_START\r\nNew Printer FW uploade started\r\n")   
         alreadyWritenAddress=0;
         restSize=0;       
-    } else if(upload.status == UPLOAD_FILE_WRITE){
-        LOG("UPLOAD_FILE_WRITE\r\nSwap\r\n")
+    } else if(upload.status == UPLOAD_FILE_WRITE || (upload.status == UPLOAD_FILE_END && restSize!=0)){
+        LOG("UPLOAD_FILE_WRITE\r\n")
 
-        size_t endCurrentUploadeAddress=alreadyWritenAddress+upload.currentSize+restSize;
+        size_t endCurrentUploadeAddress=alreadyWritenAddress+restSize;
         size_t dataReadPosition=0;
+        if (upload.status != UPLOAD_FILE_END)
+            endCurrentUploadeAddress+=upload.currentSize;
 
-        while(alreadyWritenAddress<endCurrentUploadeAddress && upload.currentSize>0){
+        while(alreadyWritenAddress<endCurrentUploadeAddress && (upload.currentSize>0 || upload.status == UPLOAD_FILE_END)){
             size_t currentWriteSize=upload.currentSize+restSize-dataReadPosition;
-            if(currentWriteSize>256)
-                currentWriteSize=256;
-            
-            //STM32 allows only to write in 4 Byte blocks.  
-            //If the rest of the current part of the uploaded FW is smaller then 4 Byte, store the data for the next uploaded part of the FW.
-            size_t rest=currentWriteSize%4;
-            if(currentWriteSize<4){
-                memcpy(restData, &upload.buf[dataReadPosition], rest);
-                restSize=rest;
-                LOG("\r\nRest Size: ")
-                LOG(restSize)
-                LOG("\r\n")
-                break;
-            }  
-            if(rest!=0)
-                currentWriteSize-=rest;   
+            if(upload.status != UPLOAD_FILE_END){
+                if(currentWriteSize>256)
+                    currentWriteSize=256;
+                
+                //STM32 allows only to write in 4 Byte blocks.  
+                //If the rest of the current part of the uploaded FW is smaller then 4 Byte, store the data for the next uploaded part of the FW.
+                size_t rest=currentWriteSize%4;
+                if(currentWriteSize<4){
+                    memcpy(restData, &upload.buf[dataReadPosition], rest);
+                    restSize=rest;
+                    LOG("\r\nRest Size: ")
+                    LOG(restSize)
+                    LOG("\r\n")
+                    break;
+                }  
+                if(rest!=0)
+                    currentWriteSize-=rest;   
+            }
 
             uint8_t buffer[5]={0x31,0xCE};
             usedSerial->write(buffer,2);    //Send Write Memory
@@ -1122,32 +1125,54 @@ void printerUpdateWebUpload ()
                 return;
             }
 
-            alreadyWritenAddress+=currentWriteSize;
-            buffer[0]=currentWriteSize-1;
-            uint8_t checksum=stm32_checksum(buffer,1);
-            usedSerial->write(buffer,1);
-            
-            //Send rest Data if upload before was not 4 Byte
-            if(restSize>0){
-                LOG("Write Rest: ")
+            if(upload.status != UPLOAD_FILE_END){
+                alreadyWritenAddress+=currentWriteSize;
+                buffer[0]=currentWriteSize-1;
+                uint8_t checksum=stm32_checksum(buffer,1);
+                usedSerial->write(buffer,1);
+                
+                //Send rest Data if upload before was not 4 Byte
+                if(restSize>0){
+                    LOG("Write Rest: ")
+                    LOG(restSize)
+                    LOG("\r\n")
+                    currentWriteSize-=restSize; 
+                    checksum=stm32_checksum(restData,restSize,checksum);
+                    usedSerial->write(restData,restSize);
+                    restSize=0;
+                }
+
+                LOG("Write Data: ")
+                LOG(currentWriteSize)
+                LOG("\r\n")
+                LOG("dataReadPosition: ")
+                LOG(dataReadPosition)
+                LOG("\r\n")
+                usedSerial->write(&upload.buf[dataReadPosition], currentWriteSize);   //Send FW Data
+                checksum=stm32_checksum(&upload.buf[dataReadPosition],currentWriteSize,checksum);
+                usedSerial->write(checksum);    //Send Checksum
+                dataReadPosition+=currentWriteSize;  
+            }
+            else{ //Send the last Data, if the FW size was not a multiple of 4 Byte
+                LOG("Send Rest: ")
                 LOG(restSize)
                 LOG("\r\n")
-                currentWriteSize-=restSize; 
+
+                alreadyWritenAddress+=restSize;
+                buffer[0]=3;
+                uint8_t checksum=stm32_checksum(buffer,1);
+                usedSerial->write(buffer,1);
+
                 checksum=stm32_checksum(restData,restSize,checksum);
                 usedSerial->write(restData,restSize);
-                restSize=0;
-            }
 
-            LOG("Write Data: ")
-            LOG(currentWriteSize)
-            LOG("\r\n")
-            LOG("dataReadPosition: ")
-            LOG(dataReadPosition)
-            LOG("\r\n")
-            usedSerial->write(&upload.buf[dataReadPosition], currentWriteSize);   //Send FW Data
-            checksum=stm32_checksum(&upload.buf[dataReadPosition],currentWriteSize,checksum);
-            usedSerial->write(checksum);    //Send Checksum
-            dataReadPosition+=currentWriteSize;   
+                buffer[0]=0xff;
+                for(uint8_t i=restSize; i<4; i++){
+                    checksum=stm32_checksum(buffer,1,checksum);
+                    usedSerial->write(buffer,1);
+                }
+                usedSerial->write(checksum);    //Send Checksum               
+            }
 
             if(0 == usedSerial->readBytes(buffer,1)){
                 LOG ("uC write acknowledgement failed, wrong answer received\r\n")
@@ -1162,22 +1187,23 @@ void printerUpdateWebUpload ()
                 return;
             }
         }
-    } else if(upload.status == UPLOAD_FILE_END){
-        LOG ("UPLOAD_FILE_END\r\n")
-        if(restSize>0)   {
-            LOG ("uC write failed, FW size not multiple of 4 Byte\r\n")
-            printerUpdateFWError="uC write failed, FW size not multiple of 4 Byte";
-            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
-            return; 
-        }
-        else if (web_interface->_upload_status==UPLOAD_STATUS_ONGOING)
-            web_interface->_upload_status=UPLOAD_STATUS_SUCCESSFUL;
-    }
+    } 
     else if(upload.status == UPLOAD_FILE_ABORTED) {
         LOG ("UPLOAD_FILE_ABORTED\r\nUploade ABORTED\r\n")
         printerUpdateFWError="uC FW Uploade Aborted";
         web_interface->_upload_status=UPLOAD_STATUS_FAILED;
         return;
+    }
+    if(upload.status == UPLOAD_FILE_END) {
+        LOG ("UPLOAD_FILE_END\r\n")
+        if(restSize>0)   {
+            LOG ("uC write warning, FW size not multiple of 4 Byte\r\n")
+            printerUpdateFWError="uC write warning, FW size not multiple of 4 Byte";
+            web_interface->_upload_status=UPLOAD_STATUS_FAILED;
+            return; 
+        } 
+        else if (web_interface->_upload_status==UPLOAD_STATUS_ONGOING)
+            web_interface->_upload_status=UPLOAD_STATUS_SUCCESSFUL;
     }
 #else
     LOG ("Unsuported uC\r\n")
