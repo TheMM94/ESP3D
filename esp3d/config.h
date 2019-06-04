@@ -31,7 +31,7 @@
 #define ESP_MANUFACTURER_NAME "Espressif Systems"
 #define ESP_MANUFACTURER_URL "http://espressif.com"
 //default name if no mac address is valid
-#define ESP_DEFAULT_NAME "FHNW-3D-Printer-Group8"
+#define ESP_DEFAULT_NAME "Ender3Pro_Team8"
 //if commented name will follow mac address 3 last digits
 //like ESP_XXXXXX (eg:ESP_028E41) to avoid overlap if several ESP3D
 #define ESP_HOST_NAME ESP_DEFAULT_NAME
@@ -73,9 +73,9 @@
 //STM32 Serial Update Speed
 #define STM32_UPDATE_SPEED 115200
 //PRINTER_UC_RESET_PIN: Pin to reset uC
-#define PRINTER_UC_RESET_PIN 19
+#define PRINTER_UC_RESET_PIN 14
 //PRINTER_UC_BOOTMODE_PIN: Pin to change pC Boot Mode
-#define PRINTER_UC_BOOTMODE_PIN 18
+#define PRINTER_UC_BOOTMODE_PIN 12
 #endif
 
 //RECOVERY_FEATURE: allow to use GPIO2 pin as hardware reset for EEPROM, add 8s to boot time to let user to jump GPIO2 to GND
@@ -356,10 +356,10 @@ typedef enum {
 
 //default values
 #define DEFAULT_WIFI_MODE			AP_MODE
-const char DEFAULT_AP_SSID []  PROGMEM =		"FHNW-3D-Printer-Group8";
-const char DEFAULT_AP_PASSWORD [] PROGMEM =	"12345678";
-const char DEFAULT_STA_SSID []  PROGMEM =		"FHNW-3D-Printer-Group8";
-const char DEFAULT_STA_PASSWORD [] PROGMEM =	"12345678";
+const char DEFAULT_AP_SSID []  PROGMEM =		"Ender3Pro_Team8";
+const char DEFAULT_AP_PASSWORD [] PROGMEM =	"1234567890";
+const char DEFAULT_STA_SSID []  PROGMEM =		"Ender3Pro_Team8";
+const char DEFAULT_STA_PASSWORD [] PROGMEM =	"1234567890";
 const byte DEFAULT_STA_IP_MODE  = 				DHCP_MODE;
 const byte DEFAULT_AP_IP_MODE = 				STATIC_IP_MODE;
 const byte DEFAULT_IP_VALUE[]   =	        {192, 168, 0, 1};

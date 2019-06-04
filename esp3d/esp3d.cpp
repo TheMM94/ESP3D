@@ -155,6 +155,7 @@ OLED_DISPLAY::splash();
 #ifdef ARDUINO_ARCH_ESP8266
         Serial.setRxBufferSize (SERIAL_RX_BUFFER_SIZE);
 #endif
+        ESPCOM::println (("M117 ESP EEPROM reset"), DEFAULT_PRINTER_PIPE);
         delay (2000);
         ESPCOM::println (F ("ESP EEPROM reset"), PRINTER_PIPE);
 #ifdef DEBUG_ESP3D
